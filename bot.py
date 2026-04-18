@@ -49,7 +49,6 @@ YTDL_OPTIONS = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
     },
-    "js_runtimes": ["nodejs"],
 }
 
 YTDL_OPTIONS_FALLBACK = {
@@ -63,7 +62,6 @@ YTDL_OPTIONS_FALLBACK = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
     },
-    "js_runtimes": ["nodejs"],
 }
 
 def get_queue(guild_id):
@@ -112,7 +110,8 @@ async def search_yt(query):
         query = f"ytsearch:{query}"
     for opts in [YTDL_OPTIONS, YTDL_OPTIONS_FALLBACK]:
         try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
+            merged = {**opts, "js_runtimes": {"nodejs": {}}}
+            with yt_dlp.YoutubeDL(merged) as ydl:
                 info = ydl.extract_info(query, download=False)
                 if "entries" in info:
                     info = info["entries"][0]
