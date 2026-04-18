@@ -48,9 +48,20 @@ YTDL_OPTIONS = {
     "http_headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     },
-    "extractor_args": {"youtube": {"skip": ["dash", "hls"]}},
+}
+
+YTDL_OPTIONS_FALLBACK = {
+    "format": "worstaudio/worst",
+    "noplaylist": True,
+    "quiet": True,
+    "default_search": "ytsearch",
+    "source_address": "0.0.0.0",
+    "cookiefile": "cookies.txt" if os.path.exists("cookies.txt") else None,
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+    },
 }
 
 def get_queue(guild_id):
@@ -95,25 +106,26 @@ def can_control_interaction(interaction, queue):
     return False
 
 async def search_yt(query):
-    with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
+    if not query.startswith("http"):
+        query = f"ytsearch:{query}"
+    for opts in [YTDL_OPTIONS, YTDL_OPTIONS_FALLBACK]:
         try:
-            if not query.startswith("http"):
-                query = f"ytsearch:{query}"
-            info = ydl.extract_info(query, download=False)
-            if "entries" in info:
-                info = info["entries"][0]
-            duration_secs = info.get("duration", 0)
-            mins, secs = divmod(int(duration_secs), 60)
-            return {
-                "title": info.get("title", "Unknown"),
-                "url": info.get("webpage_url", ""),
-                "stream_url": info.get("url", ""),
-                "duration": f"{mins}:{secs:02d}",
-                "thumbnail": info.get("thumbnail", ""),
-            }
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(query, download=False)
+                if "entries" in info:
+                    info = info["entries"][0]
+                duration_secs = info.get("duration", 0)
+                mins, secs = divmod(int(duration_secs), 60)
+                return {
+                    "title": info.get("title", "Unknown"),
+                    "url": info.get("webpage_url", ""),
+                    "stream_url": info.get("url", ""),
+                    "duration": f"{mins}:{secs:02d}",
+                    "thumbnail": info.get("thumbnail", ""),
+                }
         except Exception as e:
-            print(f"yt_dlp error: {e}")
-            return None
+            print(f"yt_dlp error (trying fallback): {e}")
+    return None
 
 
 async def fetch_playlist(url: str):
